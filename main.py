@@ -1,60 +1,35 @@
-from typing import Dict
-
-import json
-import matplotlib.pyplot as plt
+import os
 
 import easyibmq
-
-
-def show_result(job) -> None:
-    hist = easyibmq.get_hist(job)
-
-    with open('result.txt', 'w') as json_result:
-        json.dump(hist, json_result)
-
-    easyibmq.plot(hist, filename='result.png')
-    plt.show()
-
-
-def save_circuit(circuit: easyibmq.QuantumCircuit):
-    with open('circuit.txt', 'wb') as f:
-        f.write(str(circuit).encode('utf-8'))
-
-    circuit.draw(output='mpl', filename='circuit.png')
+from qiskit.circuit.random import random_circuit
 
 
 def create_circuit__h_cx() -> easyibmq.QuantumCircuit:
-    circuit = easyibmq.QuantumCircuit(2, 2)
-    circuit.h(0)
-    circuit.cx(0, 1)
-    circuit.measure((0, 1), (0, 1))
+    qc = easyibmq.QuantumCircuit(2, 2)
+    qc.h(0)
+    qc.cx(0, 1)
+    qc.measure((0, 1), (0, 1))
 
-    return circuit
+    return qc
 
 
 def create_circuit__x_cx() -> easyibmq.QuantumCircuit:
-    circuit = easyibmq.QuantumCircuit(2, 2)
-    circuit.x(0)
-    circuit.cx(0, 1)
-    circuit.measure((0, 1), (0, 1))
+    qc = easyibmq.QuantumCircuit(2, 2)
+    qc.x(0)
+    qc.cx(0, 1)
+    qc.measure((0, 1), (0, 1))
 
-    return circuit
+    return qc
 
 
 def main():
-    # if first time, register in https://quantum-computing.ibm.com/
-    # Then execute once:
-    # IBMQ.save_account(open("token.txt", "r").read())
+    circuits = [create_circuit__h_cx(), create_circuit__x_cx()] * 51
+    circuits += [random_circuit(num_qubits=4, depth=3, measure=True) for _ in range(100)]
 
-    circuit1 = create_circuit__h_cx()
-    circuit2 = create_circuit__x_cx()
+    hists = easyibmq.execute_jobs(circuits, shots=1000)
 
-    backend_name = easyibmq.query_backend_name()    # = 'ibmq_belem'
-    job1 = easyibmq.execute_job(circuit1, 1000, backend_name=backend_name)
-    job2 = easyibmq.execute_job(circuit2, 1000, backend_name=backend_name)
-
-    show_result(job1)
-    show_result(job2)
+    os.makedirs('results', exist_ok=True)
+    easyibmq.save_results('results', hists, circuits)
 
 
 if __name__ == '__main__':
